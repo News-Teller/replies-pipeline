@@ -1,27 +1,48 @@
-version: '3.6'
-services: 
-    postgres:
-        image: postgres
-        restart: always
-        environment: 
-            - DATABASE_HOST=127.0.0.1
-            - POSTGRES_DB=${DB_NAME}
-            - POSTGRES_USER=${DB_USER}
-            - POSTGRES_PASSWORD=${DB_PASSWORD}
+version: "3.6"
 
-        ports: 
-            - "5432:5432"
-        volumes: 
-            - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-        healthcheck:
-          test: ["CMD", "pg_isready -h localhost -p 5432 -U myuser"]
-          interval: 30s
-          timeout: 10s
-          retries: 5
-          
-    replies-pipeline:
-      build: './replies-pipeline'
-      container_name: replies-pipeline
-      restart: always
-      depends_on:
-        - postgres
+networks:
+  net:
+
+volumes:
+  postgres_data:
+  transformers_cache:
+
+services:
+  postgres:
+    image: postgres:9.6
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - net
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready -U ${DB_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  replies-pipeline:
+    container_name: replies-pipeline
+    build: ./replies-pipeline
+    restart: always
+    depends_on:
+      - postgres
+    networks:
+      - net
+    volumes:
+      - transformers_cache:/home/appuser/transformers_cache
+    environment:
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - KAFKA_BOOTSTRAP_SERVER=${KAFKA_BOOTSTRAP_SERVER}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}

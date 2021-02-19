@@ -1,5 +1,3 @@
-CREATE USER postgres;
-CREATE DATABASE postgres;
 GRANT ALL PRIVILEGES ON DATABASE postgres TO postgres;
 -- Table: public.Tweets
 CREATE TABLE IF NOT EXISTS public."Tweets"
