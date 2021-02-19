@@ -1,3 +1,4 @@
+import os
 from multiprocessing import Process, Queue
 from transformers import pipeline
 from languages import spacy_models
@@ -11,9 +12,14 @@ from psycopg2.extras import execute_values
 
 BATCH_SIZE = 100
 
-conn_string = 'host=127.0.0.1 port=5432 dbname=postgres user=postgres password=postgres'
 try:
-    conn = psycopg2.connect(conn_string)
+    conn = psycopg2.connect(
+        host=os.getenv('POSTGRES_HOST', 'postgres'),
+        port=os.getenv('POSTGRES_PORT', '5432'),
+        dbname=os.getenv('DB_NAME', 'postgres'),
+        user=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', 'postgres')
+    )
     conn.autocommit = True
     print("== DB connection established ==")
 except psycopg2.OperationalError as err:
@@ -45,7 +51,7 @@ def insert_bunch():
                 conn.commit()
 
                 print("\n==INSERTED:", q_insert_list[0], "\n==")
-                """ """
+                
             except Exception as exc:
                 print("Error executing SQL: %s" % exc)
             finally:
