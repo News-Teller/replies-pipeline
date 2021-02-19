@@ -1,20 +1,29 @@
 # Use an official Python runtime as a parent image
 FROM python:3.8.3-slim
 
-# Add requirements.txt before rest of repo for caching
-COPY requirements.txt /app/
-
-# Set the working directory to /app
-WORKDIR /app
-ADD . /app
+# Run as non-root user
+RUN useradd -ms /bin/bash appuser
+USER appuser
 
 # Upgrade pip
 RUN pip install --upgrade pip
 
-# Install any needed packages specified in requirements.txt
-RUN pip install --trusted-host pypi.python.org -r requirements.txt
+# Set working directory
+RUN mkdir -p /home/appuser/app
+WORKDIR /home/appuser/app
 
-#RUN pip install --user psycopg2==2.8.6
+ENV PYTHONPATH=/home/appuser/app
+ENV PATH="/home/appuser/.local/bin:${PATH}"
+
+# Install packages from requirements.txt
+COPY --chown=appuser:appuser requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Set transformer cache folder
+RUN mkdir ./transformers_cache
+ENV TRANSFORMERS_CACHE="/home/appuser/transformers_cache"
+
+# Copy app files
+COPY --chown=appuser:appuser ./*.py ./
 
 CMD ["python", "run.py"]
-#CMD [ "python", "./run.py" ]
