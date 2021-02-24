@@ -20,7 +20,7 @@ COPY --chown=appuser:appuser requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # Set transformer cache folder
-RUN mkdir ./transformers_cache
+RUN mkdir ../transformers_cache
 ENV TRANSFORMERS_CACHE="/home/appuser/transformers_cache"
 
 # Copy app files
