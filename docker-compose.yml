@@ -8,30 +8,15 @@ volumes:
   transformers_cache:
 
 services:
-  server:
-    image: postgrest/postgrest
-    ports:
-      - "3000:3000"
-    links:
-      - db:db
-    environment:
-      PGRST_DB_URI: postgres://${DB_USER}:${DB_PASSWORD}@localhost:5432/${DB_NAME}
-      PGRST_DB_SCHEMA: public
-      PGRST_DB_ANON_ROLE: ${DB_USER}
-      PGRST_SERVER_PROXY_URI: "http://localhost:3000"
-    networks:
-      - net
-    depends_on:
-      - db
-  
-  db:
+  postgres:
     image: postgres:9.6
     environment:
       - POSTGRES_DB=${DB_NAME}
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - ALLOW_IP_RANGE=0.0.0.0/0
     ports:
-      - "5432:5432"
+      - "5430:5430"
     volumes:
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
@@ -43,4 +28,38 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
+
+  replies-pipeline:
+    container_name: replies-pipeline
+    build: ./replies-pipeline
+    restart: always
+    depends_on:
+      - postgres
+    networks:
+      - net
+    volumes:
+      - transformers_cache:/home/appuser/transformers_cache
+    environment:
+      - KAFKA_TOPIC=${KAFKA_TOPIC}
+      - KAFKA_BOOTSTRAP_SERVER=${KAFKA_BOOTSTRAP_SERVER}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
   
+  server:
+    image: postgrest/postgrest
+    ports:
+      - "3000:3000"
+    links:
+      - postgres:postgres
+    networks:
+      - net
+    environment:
+      PGRST_DB_URI: postgres://${DB_USER}:${DB_PASSWORD}@postgres/${DB_NAME}
+      PGRST_DB_SCHEMA: public
+      PGRST_DB_ANON_ROLE: ${DB_USER}
+      PGRST_SERVER_PROXY_URI: "http://localhost:3000"
+    depends_on:
+      - postgres
