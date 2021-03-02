@@ -18,8 +18,6 @@ def main():
     q = Queue()
     proc = Process(target=sentiment_analysis, args=(q,))
     proc.start()
-
-    it = 0
     
     for msg in consumer_tweets:
         tweet_full = msg.value

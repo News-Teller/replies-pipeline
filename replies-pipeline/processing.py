@@ -10,12 +10,12 @@ import psycopg2
 import psycopg2.extras
 from psycopg2.extras import execute_values
 
-BATCH_SIZE = 100
+BATCH_SIZE = 50
 
 try:
     conn = psycopg2.connect(
-        host=os.getenv('POSTGRES_HOST', 'localhost'),
-        port=os.getenv('POSTGRES_PORT', '5432'),
+        host=os.getenv('POSTGRES_HOST', 'postgres'),
+        port=os.getenv('POSTGRES_PORT', '5430'),
         dbname=os.getenv('DB_NAME', 'postgres'),
         user=os.getenv('POSTGRES_USER', 'postgres'),
         password=os.getenv('POSTGRES_PASSWORD', 'postgres')
@@ -50,8 +50,7 @@ def insert_bunch():
                 values = [[value for value in q.values()] for q in q_insert_list]
                 execute_values(cur, query, values)
                 conn.commit()
-
-                print("== INSERTED", len(q_insert_list))
+                print('Inserted', len(q_insert_list))
                 
             except Exception as exc:
                 logging.warning("Error executing SQL: %s" % exc)
