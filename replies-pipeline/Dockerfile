@@ -28,7 +28,7 @@ RUN python -m spacy download it_core_news_md
 RUN python -m spacy download pt_core_news_md
 
 # Set transformer cache folder
-RUN mkdir ./transformers_cache
+RUN mkdir ../transformers_cache
 ENV TRANSFORMERS_CACHE="/home/appuser/transformers_cache"
 
 # Copy app files
