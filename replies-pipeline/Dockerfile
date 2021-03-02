@@ -19,6 +19,14 @@ ENV PATH="/home/appuser/.local/bin:${PATH}"
 COPY --chown=appuser:appuser requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
+# Download language-specific spacy models
+RUN python -m spacy download en_core_web_md
+RUN python -m spacy download de_core_news_md
+RUN python -m spacy download es_core_news_md
+RUN python -m spacy download fr_core_news_md
+RUN python -m spacy download it_core_news_md
+RUN python -m spacy download pt_core_news_md
+
 # Set transformer cache folder
 RUN mkdir ./transformers_cache
 ENV TRANSFORMERS_CACHE="/home/appuser/transformers_cache"
