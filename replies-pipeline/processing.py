@@ -27,16 +27,22 @@ except psycopg2.OperationalError as err:
 
 q_insert_list = []
 
-classifier = pipeline('sentiment-analysis')
+classifier = pipeline("zero-shot-classification")
+
+sent_hypothesis_template = "The sentiment of this tweet is {}."
+sent_candidate_labels = ["positive", "negative"]
 
 def sentiment_analysis(q):
     while True:
         if not q.empty():
             tw = q.get()
 
-            s_a = classifier(tw['text'])[0]
-            tw['sentiment_label'] = (1 if s_a['label'] == 'POSITIVE' else 0)
-            tw['sentiment_score'] = s_a['score']
+            s_a = classifier(tw['text'], sent_candidate_labels, hypothesis_template=sent_hypothesis_template)
+            pos_score = s_a['scores'][(s_a['labels'].index('positive'))]
+            neg_score = s_a['scores'][(s_a['labels'].index('negative'))]
+            tw['positive_score'] = pos_score
+            tw['negative_score'] = neg_score
+
             logging.info('Sentiment metrics calculated')
             q_insert_list.append(tw)
             insert_bunch()
@@ -78,7 +84,7 @@ def process_tweet(tweet, q):
             return
     else:
         return
-    #tweet_small['link'] = link  # tweet_small['retweet'] = retweet
+    
     factcheck = contains_factcheck(tweet) # factchecking flag
     tweet_small['factchecked'] = factcheck
     tweet_small['keywords'] = get_keywords(tweet_small['text'], tweet_small['lang'])
