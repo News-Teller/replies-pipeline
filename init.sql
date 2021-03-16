@@ -16,15 +16,16 @@ CREATE TABLE IF NOT EXISTS public."Tweets"
     factchecked boolean,
     positive_score double precision,
     negative_score double precision,
-    keywords character varying[] 
+    country character varying(10) COLLATE pg_catalog."default",
+    keywords character varying[] COLLATE pg_catalog."default"
 );
 
 CREATE VIEW positives AS
-SELECT id, original_id, text, lang, created_at, user_verified, user_followers, factchecked, positive_score, negative_score, keywords
+SELECT id, original_id, text, lang, created_at, user_verified, user_followers, factchecked, positive_score, negative_score, country, keywords
 	FROM public."Tweets"
 	ORDER BY round( CAST(positive_score as numeric), 4)  DESC, (CASE when user_verified then 1 else 2 end) ASC, user_followers DESC, factchecked;
 
 CREATE VIEW negatives AS
-SELECT id, original_id, text, lang, created_at, user_verified, user_followers, factchecked, positive_score, negative_score, keywords
+SELECT id, original_id, text, lang, created_at, user_verified, user_followers, factchecked, positive_score, negative_score, country, keywords
 	FROM public."Tweets"
 	ORDER BY round( CAST(negative_score as numeric), 4)  DESC, (CASE when user_verified then 1 else 2 end) ASC, user_followers DESC, factchecked;

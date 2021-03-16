@@ -16,18 +16,18 @@ def main():
         enable_auto_commit=True)
 
     q = Queue()
-    proc = Process(target=sentiment_analysis, args=(q,))
-    proc.start()
+    #proc = Process(target=sentiment_analysis, args=(q,))
+    #proc.start()
     
     for msg in consumer_tweets:
         tweet_full = msg.value
-            
-        if tweet_full['lang'] != 'en' and tweet_full['lang'] is not None:
+
+        if tweet_full['lang'] not in spacy_models.keys() and tweet_full['lang'] is not None:
             continue
-        
+
         process_tweet(tweet_full, q)
 
-    proc.join()
+    #proc.join()
 
 
 if __name__ == "__main__":

@@ -33,19 +33,19 @@ sent_hypothesis_template = "The sentiment of this tweet is {}."
 sent_candidate_labels = ["positive", "negative"]
 
 def sentiment_analysis(q):
-    while True:
-        if not q.empty():
-            tw = q.get()
+    #while True:
+    if not q.empty():
+        tw = q.get()
 
-            s_a = classifier(tw['text'], sent_candidate_labels, hypothesis_template=sent_hypothesis_template)
-            pos_score = s_a['scores'][(s_a['labels'].index('positive'))]
-            neg_score = s_a['scores'][(s_a['labels'].index('negative'))]
-            tw['positive_score'] = pos_score
-            tw['negative_score'] = neg_score
+        s_a = classifier(tw['text'], sent_candidate_labels, hypothesis_template=sent_hypothesis_template)
+        pos_score = s_a['scores'][(s_a['labels'].index('positive'))]
+        neg_score = s_a['scores'][(s_a['labels'].index('negative'))]
+        tw['positive_score'] = pos_score
+        tw['negative_score'] = neg_score
 
-            logging.info('Sentiment metrics calculated')
-            q_insert_list.append(tw)
-            insert_bunch()
+        logging.info('Sentiment metrics calculated')
+        q_insert_list.append(tw)
+        insert_bunch()
 
 def insert_bunch():
     if len(q_insert_list) > BATCH_SIZE:
@@ -56,7 +56,7 @@ def insert_bunch():
                 values = [[value for value in q.values()] for q in q_insert_list]
                 execute_values(cur, query, values)
                 conn.commit()
-                print('Inserted', len(q_insert_list))
+                logging.info('Inserted', len(q_insert_list))
                 
             except Exception as exc:
                 logging.warning("Error executing SQL: %s" % exc)
@@ -90,5 +90,6 @@ def process_tweet(tweet, q):
     tweet_small['keywords'] = get_keywords(tweet_small['text'], tweet_small['lang'])
 
     q.put(tweet_small)
+    sentiment_analysis(q)
 
     return
