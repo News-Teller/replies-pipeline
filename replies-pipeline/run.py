@@ -1,6 +1,6 @@
 import os
 import json
-from multiprocessing import Process, Queue
+#from multiprocessing import Process, Queue
 from kafka import KafkaConsumer
 from processing import *
 
