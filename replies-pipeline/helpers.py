@@ -1,4 +1,7 @@
 from datetime import datetime
+from geopy.geocoders import Nominatim
+import logging
+
 from factcheckers import domains
 
 def condense_tweet(tw):
@@ -15,6 +18,7 @@ def condense_tweet(tw):
         # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
         'user_followers': tw['user']['followers_count']
+        'country': get_country_code(tw)
     }
 
     return tweet_dict
@@ -35,6 +39,7 @@ def condense_retweet(tw):
         # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
         'user_followers': tw['user']['followers_count'] # importance of user: verified, followers_count
+        'country': get_country_code(tw)
     }
 
     return tweet_dict
@@ -77,3 +82,16 @@ def get_link_retweet(tw):
         return None
     else:
         return links[0]['expanded_url']
+
+def get_country_code(tw):
+    address = tw['user']['location']
+    if address is None:
+        return None
+    try:
+        loc = geolocator.geocode(address)
+        if loc is None:
+            return None
+        code = geolocator.reverse((loc.raw['lat'], loc.raw['lon']), language='en').raw['address']['country_code']
+        return code
+    except Exception as exc:
+        logging.warning("Geocoding failed: %s" % exc)
