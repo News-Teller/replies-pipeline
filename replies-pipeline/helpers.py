@@ -4,6 +4,8 @@ import logging
 
 from factcheckers import domains
 
+geolocator = Nominatim(user_agent="app")
+
 def condense_tweet(tw):
     text = tw['extended_tweet']['full_text'] if tw['truncated'] else tw['text']
 
