@@ -1,6 +1,6 @@
 import os
 import json
-#from multiprocessing import Process, Queue
+import queue #from multiprocessing import Process, Queue
 from kafka import KafkaConsumer
 from processing import *
 
@@ -15,7 +15,7 @@ def main():
         auto_offset_reset='latest',
         enable_auto_commit=True)
 
-    q = Queue()
+    q = queue.Queue()
     #proc = Process(target=sentiment_analysis, args=(q,))
     #proc.start()
     
