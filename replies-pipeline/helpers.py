@@ -17,7 +17,7 @@ def condense_tweet(tw):
         'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
         # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
-        'user_followers': tw['user']['followers_count']
+        'user_followers': tw['user']['followers_count'],
         'country': get_country_code(tw)
     }
 
@@ -38,7 +38,7 @@ def condense_retweet(tw):
         'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
         # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
-        'user_followers': tw['user']['followers_count'] # importance of user: verified, followers_count
+        'user_followers': tw['user']['followers_count'], # importance of user: verified, followers_count
         'country': get_country_code(tw)
     }
 
