@@ -1,7 +1,9 @@
 import os
 import json
-import queue #from multiprocessing import Process, Queue
 from kafka import KafkaConsumer
+
+from multiprocessing import Process, Queue
+
 from processing import *
 
 def main():
@@ -15,9 +17,20 @@ def main():
         auto_offset_reset='latest',
         enable_auto_commit=True)
 
-    q = queue.Queue()
-    #proc = Process(target=sentiment_analysis, args=(q,))
-    #proc.start()
+    manager = Manager()
+    queue_sentiment = manager.Queue()
+    queue_location = manager.Queue()
+    queue_insertion = manager.Queue()
+
+    processes = []
+
+    processes.append(Process(target=insert_bunch, args=(queue_insertion,)))
+    processes.append(Process(target=geolocalize, args=(queue_location,queue_insertion,)))
+    processes.append(Process(target=sentiment_analysis, args=(queue_sentiment,queue_location,)))
+    processes.append(Process(target=sentiment_analysis, args=(queue_sentiment,queue_location,)))
+    
+    for p in processes:
+        p.start()
     
     for msg in consumer_tweets:
         tweet_full = msg.value
@@ -25,9 +38,10 @@ def main():
         if tweet_full['lang'] not in spacy_models.keys() and tweet_full['lang'] is not None:
             continue
 
-        process_tweet(tweet_full, q)
+        process_tweet(tweet_full, queue_sentiment, queue_location)
 
-    #proc.join()
+    for p in processes:
+        p.join()
 
 
 if __name__ == "__main__":

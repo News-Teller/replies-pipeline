@@ -1,26 +1,29 @@
-from datetime import datetime
-from geopy.geocoders import Nominatim
+import time
 import logging
+
+from datetime import datetime
+
+from geopy.exc import GeocoderTimedOut
+from geopy.geocoders import Nominatim
 
 from factcheckers import domains
 
-geolocator = Nominatim(user_agent="app")
+geolocator = Nominatim(user_agent='twitter_replies_geolocation')
 
-def condense_tweet(tw):
-    text = tw['extended_tweet']['full_text'] if tw['truncated'] else tw['text']
+def condense_tweet(tw, bare_retweet=False):
+    if bare_retweet:
+        text = 'RT'
+    else:
+        text = tw['extended_tweet']['full_text'] if tw['truncated'] else tw['text']
 
     tweet_dict = {
         'id': tw['id'],
         'text': text,
         'lang': tw['lang'],
-        #'reply_count': tw['reply_count'],
-        #'retweet_count': tw['retweet_count'],
-        #'favorite_count': tw['favorite_count'],
         'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
-        # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
         'user_followers': tw['user']['followers_count'],
-        'country': get_country_code(tw)
+        'country': tw['user']['location']
     }
 
     return tweet_dict
@@ -34,14 +37,10 @@ def condense_retweet(tw):
         'original_id': tw['retweeted_status']['id'],
         'text': text,
         'lang': tw['lang'],
-        #'reply_count': tw['reply_count'],
-        #'retweet_count': tw['retweet_count'],
-        #'favorite_count': tw['favorite_count'],
         'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
-        # 'is_quote_status': tw['is_quote_status'],
         'user_verified': tw['user']['verified'],
         'user_followers': tw['user']['followers_count'], # importance of user: verified, followers_count
-        'country': get_country_code(tw)
+        'country': tw['user']['location']
     }
 
     return tweet_dict
@@ -85,15 +84,22 @@ def get_link_retweet(tw):
     else:
         return links[0]['expanded_url']
 
-def get_country_code(tw):
-    address = tw['user']['location']
-    if address is None:
+def get_link_retweet(tw):
+    if 'extended_tweet' in tw['retweeted_status']:
+        links = tw['retweeted_status']['extended_tweet']['entities']['urls']
+    else:
+        links = tw['retweeted_status']['entities']['urls']
+    if links == []:
         return None
+    else:
+        return links[0]['expanded_url']
+
+def to_geocode(address, attempt=1, max_attempts=0, timeout=1):
     try:
-        loc = geolocator.geocode(address)
-        if loc is None:
-            return None
-        code = geolocator.reverse((loc.raw['lat'], loc.raw['lon']), language='en').raw['address']['country_code']
-        return code
-    except Exception as exc:
-        logging.warning("Geocoding failed: %s" % exc)
+        return geolocator.geocode(address)
+
+    except GeocoderTimedOut:
+        if attempt <= max_attempts:
+            time.sleep(timeout)
+            return to_geocode(address, attempt=attempt+1, timeout=timeout+1)
+        raise
