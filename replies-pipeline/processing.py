@@ -97,9 +97,9 @@ def get_country_code(cities, countries, address):
 
 def geolocalize(q_geo, q_ins):
     # Load toponymic data
-    with open('../geodata/cities.json') as json_file:
+    with open('geodata/cities.json') as json_file:
         cities = json.load(json_file)
-    with open('../geodata/countries_all.json') as json_file:
+    with open('geodata/countries_all.json') as json_file:
         countries = json.load(json_file)
     
     while True:
