@@ -2,7 +2,7 @@ import os
 import json
 from kafka import KafkaConsumer
 
-from multiprocessing import Process, Queue
+from multiprocessing import Manager, Process, Queue
 
 from processing import *
 
