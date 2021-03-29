@@ -36,4 +36,7 @@ ENV TRANSFORMERS_CACHE="/home/appuser/transformers_cache"
 # Copy app files
 COPY --chown=appuser:appuser ./*.py ./
 
+# Copy geodata cache
+COPY --chown=appuser:appuser ./geodata/* ./geodata/
+
 CMD ["python", "run.py"]
