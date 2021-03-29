@@ -10,11 +10,13 @@ from factcheckers import domains
 
 geolocator = Nominatim(user_agent='twitter_replies_geolocation')
 
-def condense_tweet(tw, bare_retweet=False):
+def condense_tweet(tw, bare_retweet=False, tw_sub=None):
     if bare_retweet:
         text = 'RT'
-    else:
+    elif tw_sub is None:
         text = tw['extended_tweet']['full_text'] if tw['truncated'] else tw['text']
+    else:
+        text = tw_sub['extended_tweet']['full_text'] if tw_sub['truncated'] else tw_sub['text']
 
     tweet_dict = {
         'id': tw['id'],
@@ -23,23 +25,6 @@ def condense_tweet(tw, bare_retweet=False):
         'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
         'user_verified': tw['user']['verified'],
         'user_followers': tw['user']['followers_count'],
-        'country': tw['user']['location']
-    }
-
-    return tweet_dict
-
-def condense_retweet(tw):
-    text = tw['retweeted_status']['extended_tweet']['full_text'] if tw['retweeted_status']['truncated'] else \
-    tw['retweeted_status']['text']
-
-    tweet_dict = {
-        'id': tw['id'],
-        'original_id': tw['retweeted_status']['id'],
-        'text': text,
-        'lang': tw['lang'],
-        'created_at': datetime.strptime(tw['created_at'], '%a %b %d %H:%M:%S %z %Y'),
-        'user_verified': tw['user']['verified'],
-        'user_followers': tw['user']['followers_count'], # importance of user: verified, followers_count
         'country': tw['user']['location']
     }
 
@@ -69,16 +54,6 @@ def get_link_quote(tw):
         links = tw['quoted_status']['extended_tweet']['entities']['urls']
     else:
         links = tw['quoted_status']['entities']['urls']
-    if links == []:
-        return None
-    else:
-        return links[0]['expanded_url']
-
-def get_link_retweet(tw):
-    if 'extended_tweet' in tw['retweeted_status']:
-        links = tw['retweeted_status']['extended_tweet']['entities']['urls']
-    else:
-        links = tw['retweeted_status']['entities']['urls']
     if links == []:
         return None
     else:

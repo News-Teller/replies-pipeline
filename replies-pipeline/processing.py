@@ -10,8 +10,8 @@ import psycopg2
 import psycopg2.extras
 from psycopg2.extras import execute_values
 
-BATCH_SIZE_SENTIMENT = 20
-BATCH_SIZE_INSERT = 50
+BATCH_SIZE_SENTIMENT = 50
+BATCH_SIZE_INSERT = 100
 
 
 try:
@@ -28,12 +28,11 @@ except psycopg2.OperationalError as err:
     logging.error(err)
 
 
-classifier = pipeline("zero-shot-classification")
-sent_hypothesis_template = "The sentiment of this tweet is {}."
-sent_candidate_labels = ["positive", "negative"]
-
-
 def sentiment_analysis(q_sent, q_geo):
+    classifier = pipeline("zero-shot-classification")
+    sent_hypothesis_template = "The sentiment of this tweet is {}."
+    sent_candidate_labels = ["positive", "negative"]
+
     for_analysis = []
 
     while True:
@@ -42,8 +41,6 @@ def sentiment_analysis(q_sent, q_geo):
             for_analysis.append(tweet)
         
         if len(for_analysis) > BATCH_SIZE_SENTIMENT:
-            time.sleep(3)
-            
             text_only = []
 
             for el in for_analysis:
@@ -57,11 +54,11 @@ def sentiment_analysis(q_sent, q_geo):
                 
                 for_analysis[i]['positive_score'] = pos_score
                 for_analysis[i]['negative_score'] = neg_score
-
-            logging.warning('Sentiment metrics calculated for ', len(to_sa), 'tweets')
             
             for el in for_analysis:
                 q_geo.put(el)
+            
+            logging.warning( 'Sentiment metrics calculated for {} tweets'.format(str(BATCH_SIZE_SENTIMENT)) )
             
             for_analysis[:] = []
     
@@ -89,7 +86,7 @@ def get_country_code(cities, countries, address):
             return None
         
         code = geolocator.reverse((loc.raw['lat'], loc.raw['lon']), language='en').raw['address']['country_code']
-        tweet['country'] = code
+        return code
 
     except Exception as exc:
         logging.warning("Geocoding failed: %s" % exc)
@@ -117,21 +114,24 @@ def insert_bunch(q_ins):
     while True:
         if not q_ins.empty():
             tweet = q_ins.get()
-            tweet['keywords'] = get_keywords(tweet['text'], tweet['lang'])
+            if 'keywords' not in tweet:
+                tweet['keywords'] = get_keywords(tweet['text'], tweet['lang'])
+            else:
+                kw = get_keywords(tweet['keywords'], tweet['lang'])
+                tweet['keywords'] = kw
 
             to_insert.append(tweet)
 
         if len(to_insert) > BATCH_SIZE_INSERT:
             with conn.cursor() as cur:
                 try:
-                    """
                     columns = to_insert[0].keys()
                     query = 'INSERT INTO public."Tweets" ({}) VALUES %s'.format(','.join(columns))
                     values = [[value for value in mini_tweet.values()] for mini_tweet in to_insert]
                     execute_values(cur, query, values)
                     conn.commit()
-                    """
-                    print('Inserted', len(to_insert))
+
+                    logging.warning('Inserted {} tweets'.format(str(len(BATCH_SIZE_INSERT))))
                 except Exception as exc:
                     logging.warning("Error executing SQL: %s" % exc)
                 finally:
@@ -142,54 +142,60 @@ def insert_bunch(q_ins):
 def process_tweet(tweet, q_sent, q_geo):
     # Check if tweet is a reply
     if tweet['in_reply_to_status_id'] is not None:
+        tweet_small = condense_tweet(tweet)
+        
+        tweet_small['reply_to'] = tweet['in_reply_to_status_id']
 
-        factcheck = contains_factcheck(tweet_full) # factchecking flag
+        if not tweet['is_quote_status']:
+            factcheck = contains_factcheck(tweet)
+            tweet_small['factchecked'] = factcheck
+            tweet_small['retweet_of'] = None
+        else:
+            tweet_small['factchecked'] = True
+            tweet_small['retweet_of'] = tweet['is_quote_status']['id']
+            tweet_small['keywords'] = ''.join(tweet['text'], ': \"', tweet['is_quote_status']['text'], '\"')
 
-        tweet = condense_tweet(tweet)
+        q_sent.put(tweet_small)
+        
+    # RT of a Quote
+    elif tweet['is_quote_status'] and 'retweeted_status' in tweet:
+        tweet_small['reply_to'] = None
+        
+        user = tweet['user']
+        retweeted = tweet['retweeted_status']
+        retweeted['user'] = user
+        tweet_small = condense_tweet(retweeted)
+        factcheck = contains_factcheck(retweeted)
 
         tweet_small['factchecked'] = factcheck
-        tweet_small['reply_to'] = tweet['in_reply_to_status_id']
-        tweet_small['retweet_of'] = None
-        
-    elif tweet_full['is_quote_status'] and 'retweeted_status' in tweet_full:
-        # RT d'Q
-        retweeted_status = tweet['retweeted_status']['extended_tweet']['full_text'] \
-            if tweet['retweeted_status']['truncated'] else \
-                tweet['retweeted_status']['text']
-        
+        tweet_small['retweet_of'] = retweeted['quoted_status_id']
+        tweet_small['keywords'] = tweet['quoted_status']['text']
+
+        q_sent.put(tweet_small)
+
+    # Quote    
     elif tweet_full['is_quote_status'] in tweet_full:
         text = tweet['extended_tweet']['full_text'] if tweet['truncated'] else \
                 tweet['text']
-        original = tweet['quoted_status_id']
-
-        #link = get_link_retweet(tweet)
-        #if link is not None:
-        #    return
-        
-        factcheck = contains_factcheck(tweet_full) # factchecking flag
 
         tweet = condense_tweet(tweet)
-
+        factcheck = contains_factcheck(tweet_full)
         tweet_small['factchecked'] = factcheck
         tweet_small['reply_to'] = None
         tweet_small['retweet_of'] = tweet['quoted_status_id']
-    else:
-        text = tweet['extended_tweet']['full_text'] if tweet['truncated'] else \
-                tweet['text']
-        original = tweet['quoted_status_id']
+        tweet_small['keywords'] = ''.join(tweet['text'], ': \"', tweet['quoted_status']['text'], '\"')
 
-        #link = get_link_retweet(tweet)
-        #if link is not None:
-        #    return
-        
-        factcheck = contains_factcheck(tweet_full) # factchecking flag
+        q_sent.put(tweet_small)
+    
+    # Bare retweet
+    elif 'retweeted_status' in tweet:
+        tweet_small = condense_tweet(tweet, bare_retweet=True)
 
-        tweet = condense_tweet(tweet)
-
-        tweet_small['factchecked'] = factcheck
+        tweet_small['factchecked'] = False
         tweet_small['reply_to'] = None
         tweet_small['retweet_of'] = tweet['retweeted_status']['id']
+        tweet_small['keywords'] = tweet['retweeted_status']['text']
 
-    q_sent.put(tweet_small)
+        q_sent.put(tweet_small)
 
     return
