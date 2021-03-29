@@ -35,7 +35,7 @@ def main():
     for msg in consumer_tweets:
         tweet_full = msg.value
 
-        if tweet_full['lang'] not in spacy_models.keys() and tweet_full['lang'] is not None:
+        if tweet_full['lang'] is not None and tweet_full['lang'] not in spacy_models.keys():
             continue
 
         process_tweet(tweet_full, queue_sentiment, queue_location)

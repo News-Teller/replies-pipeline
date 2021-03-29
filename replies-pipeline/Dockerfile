@@ -26,6 +26,8 @@ RUN python -m spacy download es_core_news_md
 RUN python -m spacy download fr_core_news_md
 RUN python -m spacy download it_core_news_md
 RUN python -m spacy download pt_core_news_md
+RUN python -m spacy download el_core_news_md
+RUN python -m spacy download ru_core_news_md
 
 # Set transformer cache folder
 RUN mkdir ../transformers_cache
