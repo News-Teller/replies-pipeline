@@ -8,7 +8,7 @@ from geopy.geocoders import Nominatim
 
 from factcheckers import domains
 
-geolocator = Nominatim(user_agent='twitter_replies_geolocation')
+geolocator = Nominatim(user_agent='twitter_replies_app')
 
 def condense_tweet(tw, bare_retweet=False, tw_sub=None):
     if bare_retweet:

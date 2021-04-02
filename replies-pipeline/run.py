@@ -26,8 +26,10 @@ def main():
 
     processes.append(Process(target=insert_bunch, args=(queue_insertion,)))
     processes.append(Process(target=geolocalize, args=(queue_location,queue_insertion,)))
+    #processes.append(Process(target=geolocalize, args=(queue_location,queue_insertion,)))
     processes.append(Process(target=sentiment_analysis, args=(queue_sentiment,queue_location,)))
     processes.append(Process(target=sentiment_analysis, args=(queue_sentiment,queue_location,)))
+    #processes.append(Process(target=sentiment_analysis, args=(queue_sentiment,queue_location,)))
     
     for p in processes:
         p.start()
