@@ -11,6 +11,11 @@ import psycopg2
 import psycopg2.extras
 from psycopg2.extras import execute_values
 
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.WARNING,
+    datefmt='%Y-%m-%d %H:%M:%S')
+
 BATCH_SIZE_SENTIMENT = 30
 BATCH_SIZE_INSERT = 100
 
@@ -30,7 +35,7 @@ except psycopg2.OperationalError as err:
     logging.error(err)
 
 
-def sentiment_analysis(q_sent, q_geo):
+def sentiment_analysis(q_sent, q_geo, q_ins):
     classifier = pipeline('zero-shot-classification')
     sent_hypothesis_template = "The sentiment of this tweet is {}."
     sent_candidate_labels = ['positive', 'negative']
@@ -57,7 +62,13 @@ def sentiment_analysis(q_sent, q_geo):
                 for_analysis[i]['positive_score'] = pos_score
             
             for el in for_analysis:
-                q_geo.put(el)
+                address = el['country']
+                if address is not None:
+                    if len(address) > 4:
+                        q_geo.put(el)
+                else:
+                    el['country'] = None
+                    q_ins.put(el)
             
             logging.info( 'Sentiment metrics calculated for {} tweets'.format(str(BATCH_SIZE_SENTIMENT)) )
             
@@ -84,10 +95,10 @@ def get_country_code(cities, countries, address):
         return None
 
     try:
-        loc = to_geocode(address)
+        loc, geolocator = to_geocode(address)
         if loc is None:
             return None
-        time.sleep(0.05)
+        #time.sleep(0.05)
         code = geolocator.reverse((loc.raw['lat'], loc.raw['lon']), language='en').raw['address']['country_code']
         logging.info('Tweet geocoded')
         return code
@@ -135,7 +146,7 @@ def insert_bunch(q_ins):
                     execute_values(cur, query, values)
                     conn.commit()
 
-                    logging.info('> Inserted {} tweets'.format(BATCH_SIZE_INSERT))
+                    logging.warning('> Inserted {} tweets'.format(BATCH_SIZE_INSERT))
                     
                 except Exception as exc:
                     logging.warning("Error executing SQL: %s" % exc)

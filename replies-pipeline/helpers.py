@@ -71,10 +71,10 @@ def get_link_retweet(tw):
 
 def to_geocode(address, attempt=1, max_attempts=0, timeout=1):
     try:
-        return geolocator.geocode(address)
+        return geolocator.geocode(address), geolocator
 
     except GeocoderTimedOut:
-        if attempt <= max_attempts:
+        if attempt < max_attempts:
             time.sleep(timeout)
-            return to_geocode(address, attempt=attempt+1, timeout=timeout+1)
+            return to_geocode(address, attempt=attempt+1, timeout=timeout+1), geolocator
         raise
